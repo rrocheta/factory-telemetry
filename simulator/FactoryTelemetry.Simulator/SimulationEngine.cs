@@ -63,7 +63,12 @@ public sealed class SimulationEngine
         {
             ts = DateTime.UtcNow,
             state = _state.ToString(),
-            axis = new { x = Round2(_x), y = Round2(_y), z = Round2(_z) }
+            axis = new
+            {
+                x = new { value = Round2(_x), unit = "mm" },
+                y = new { value = Round2(_y), unit = "mm" },
+                z = new { value = Round2(_z), unit = "mm" }
+            }
         };
 
         await _publisher.PublishJsonAsync("factory/cnc1/axis/pos", payload, ct);
@@ -104,9 +109,23 @@ public sealed class SimulationEngine
         {
             ts = DateTime.UtcNow,
             state = _state.ToString(),
-            spindle = new { rpm = (int)Math.Round(_rpm) },
-            power = new { kw = Round2(_power) },
-            vibration = new { value = Round2(_vibration), unit = "mm/s" }
+
+            spindle = new
+            {
+                rpm = new { value = (int)Math.Round(_rpm), unit = "rpm" }
+            },
+
+            power = new
+            {
+                value = Round2(_power),
+                unit = "kW"
+            },
+
+            vibration = new
+            {
+                value = Round2(_vibration),
+                unit = "mm/s"
+            }
         };
 
         await _publisher.PublishJsonAsync("factory/cnc1/power", payload, ct);
