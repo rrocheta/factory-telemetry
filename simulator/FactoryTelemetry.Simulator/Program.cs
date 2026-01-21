@@ -22,6 +22,9 @@ internal class Program
             builder.Logging.ClearProviders();
             builder.Logging.AddSerilog(Log.Logger);
 
+            builder.Services.AddSingleton<IPublisher, ConsolePublisher>();
+
+            builder.Services.AddSingleton<SimulationEngine>();
             builder.Services.AddHostedService<SimulatorService>();
             //builder.Services.AddSingleton<IMqttService, MqttService>();
 
