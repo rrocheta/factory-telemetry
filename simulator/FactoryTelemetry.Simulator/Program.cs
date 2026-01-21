@@ -1,10 +1,40 @@
-﻿namespace FactoryTelemetry.Simulator
+﻿using FactoryTelemetry.Simulator;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Serilog;
+
+internal class Program
 {
-    internal class Program
+    static async Task Main(string[] args)
     {
-        static void Main(string[] args)
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .Enrich.FromLogContext()
+            .WriteTo.Console(
+                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+            .CreateLogger();
+
+        try
         {
-            Console.WriteLine("Hello, World!");
+            var builder = Host.CreateApplicationBuilder(args);
+
+            builder.Logging.ClearProviders();
+            builder.Logging.AddSerilog(Log.Logger);
+
+            builder.Services.AddHostedService<SimulatorService>();
+            //builder.Services.AddSingleton<IMqttService, MqttService>();
+
+            var host = builder.Build();
+            await host.RunAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Simulator terminated unexpectedly");
+        }
+        finally
+        {
+            Log.CloseAndFlush();
         }
     }
 }
