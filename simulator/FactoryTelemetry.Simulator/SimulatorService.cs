@@ -5,7 +5,6 @@ namespace FactoryTelemetry.Simulator
 {
     public class SimulatorService : BackgroundService
     {
-
         private readonly ILogger<SimulatorService> _logger;
         private readonly SimulationEngine _engine;
 
@@ -19,15 +18,9 @@ namespace FactoryTelemetry.Simulator
         {
             _logger.LogInformation("Simulator started");
 
-            var tasks = new List<Task>
-            {
-                RunFastSignalsLoop(stoppingToken), // 1 s
-                RunTemperatureLoop(stoppingToken)  // 2–5 s
-            };
-
             try
             {
-                await Task.WhenAll(tasks);
+                await _engine.RunAsync(stoppingToken);
             }
             catch (OperationCanceledException)
             {
@@ -36,29 +29,6 @@ namespace FactoryTelemetry.Simulator
             finally
             {
                 _logger.LogInformation("Simulator stopping");
-            }
-
-        }
-
-        private async Task RunFastSignalsLoop(CancellationToken ct)
-        {
-            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
-            while (await timer.WaitForNextTickAsync(ct))
-            {
-                await _engine.PublishAxisAsync(ct);
-                await _engine.PublishVibrationAndPowerAsync(ct);
-                await _engine.PublishStateAndHeartbeatAsync(ct);
-            }
-        }
-
-        private async Task RunTemperatureLoop(CancellationToken ct)
-        {
-            while (!ct.IsCancellationRequested)
-            {
-                await _engine.PublishTemperaturesAsync(ct);
-
-                var delayMs = _engine.NextTemperatureDelayMs();
-                await Task.Delay(delayMs, ct);
             }
         }
     }

@@ -25,7 +25,6 @@ internal class Program
             builder.Services.AddSingleton<IPublisher, MqttPublisher>();
             builder.Services.AddSingleton<SimulationEngine>();
             builder.Services.AddHostedService<SimulatorService>();
-            //builder.Services.AddSingleton<IMqttService, MqttService>();
 
             var host = builder.Build();
             await host.RunAsync();
