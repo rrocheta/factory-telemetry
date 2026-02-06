@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "programs": [
+    {
+      "id": "prog1",
+      "name": "Roughing V1",
+      "ideal_cycle_ms": 60000,
+      "base_reject_rate": 0.01
+    }
+  ]
+}

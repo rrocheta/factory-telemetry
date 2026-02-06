@@ -22,6 +22,16 @@ internal class Program
             builder.Logging.ClearProviders();
             builder.Logging.AddSerilog(Log.Logger);
 
+            var machineId = Environment.GetEnvironmentVariable("SIM_MACHINE_ID") ?? "cnc1";
+            var seedEnv = Environment.GetEnvironmentVariable("SIM_SEED");
+            var seed = int.TryParse(seedEnv, out var parsedSeed)
+                ? parsedSeed
+                : StableHash(machineId);
+
+            var basePath = builder.Environment.ContentRootPath;
+            var simConfig = SimulatorConfig.Load(basePath, machineId, seed);
+
+            builder.Services.AddSingleton(simConfig);
             builder.Services.AddSingleton<IPublisher, MqttPublisher>();
             builder.Services.AddSingleton<SimulationEngine>();
             builder.Services.AddHostedService<SimulatorService>();
@@ -36,6 +46,22 @@ internal class Program
         finally
         {
             Log.CloseAndFlush();
+        }
+    }
+
+    // Deterministic seed from machineId for reproducible simulations per machine.
+    private static int StableHash(string value)
+    {
+        unchecked
+        {
+            var hash = 2166136261u;
+            foreach (var c in value)
+            {
+                hash ^= c;
+                hash *= 16777619u;
+            }
+
+            return (int)hash;
         }
     }
 }

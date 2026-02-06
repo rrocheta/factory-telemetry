@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "parts": [
+    {
+      "id": "housing_A",
+      "name": "Housing A",
+      "routing": [
+        {
+          "operation_id": "OP10",
+          "name": "Roughing",
+          "program": "prog1"
+        }
+      ]
+    }
+  ]
+}
