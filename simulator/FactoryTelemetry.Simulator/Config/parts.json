@@ -8,7 +8,106 @@
         {
           "operation_id": "OP10",
           "name": "Roughing",
-          "program": "prog1"
+          "program": "prog10_rough"
+        },
+        {
+          "operation_id": "OP20",
+          "name": "Drilling",
+          "program": "prog30_drill"
+        },
+        {
+          "operation_id": "OP30",
+          "name": "Finishing",
+          "program": "prog20_finish"
+        }
+      ]
+    },
+    {
+      "id": "bracket_B",
+      "name": "Bracket B",
+      "routing": [
+        {
+          "operation_id": "OP10",
+          "name": "Warmup",
+          "program": "prog50_warmup"
+        },
+        {
+          "operation_id": "OP20",
+          "name": "Roughing",
+          "program": "prog10_rough"
+        },
+        {
+          "operation_id": "OP30",
+          "name": "Finishing",
+          "program": "prog20_finish"
+        },
+        {
+          "operation_id": "OP40",
+          "name": "Probing",
+          "program": "prog40_probe"
+        }
+      ]
+    },
+    {
+      "id": "shaft_C",
+      "name": "Shaft C",
+      "routing": [
+        {
+          "operation_id": "OP10",
+          "name": "Tool Change",
+          "program": "prog60_toolchg"
+        },
+        {
+          "operation_id": "OP20",
+          "name": "Roughing",
+          "program": "prog10_rough"
+        },
+        {
+          "operation_id": "OP30",
+          "name": "Drilling",
+          "program": "prog30_drill"
+        },
+        {
+          "operation_id": "OP40",
+          "name": "Finishing",
+          "program": "prog20_finish"
+        },
+        {
+          "operation_id": "OP50",
+          "name": "Probing",
+          "program": "prog40_probe"
+        }
+      ]
+    },
+    {
+      "id": "cover_D",
+      "name": "Cover D",
+      "routing": [
+        {
+          "operation_id": "OP10",
+          "name": "Roughing",
+          "program": "prog10_rough"
+        }
+      ]
+    },
+    {
+      "id": "plate_E_fail",
+      "name": "Plate E (Failing Probe)",
+      "routing": [
+        {
+          "operation_id": "OP10",
+          "name": "Roughing",
+          "program": "prog10_rough"
+        },
+        {
+          "operation_id": "OP20",
+          "name": "Failing Probe",
+          "program": "prog99_fail"
+        },
+        {
+          "operation_id": "OP30",
+          "name": "Finishing",
+          "program": "prog20_finish"
         }
       ]
     }

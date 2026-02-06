@@ -2,10 +2,46 @@
   "schema_version": 1,
   "programs": [
     {
-      "id": "prog1",
-      "name": "Roughing V1",
-      "ideal_cycle_ms": 60000,
+      "id": "prog10_rough",
+      "name": "Roughing",
+      "ideal_cycle_ms": 72000,
+      "base_reject_rate": 0.02
+    },
+    {
+      "id": "prog20_finish",
+      "name": "Finishing",
+      "ideal_cycle_ms": 48000,
       "base_reject_rate": 0.01
+    },
+    {
+      "id": "prog30_drill",
+      "name": "Drilling",
+      "ideal_cycle_ms": 36000,
+      "base_reject_rate": 0.015
+    },
+    {
+      "id": "prog40_probe",
+      "name": "Probing",
+      "ideal_cycle_ms": 12000,
+      "base_reject_rate": 0.005
+    },
+    {
+      "id": "prog50_warmup",
+      "name": "Tool Warmup",
+      "ideal_cycle_ms": 15000,
+      "base_reject_rate": 0.0
+    },
+    {
+      "id": "prog60_toolchg",
+      "name": "Tool Change",
+      "ideal_cycle_ms": 18000,
+      "base_reject_rate": 0.0
+    },
+    {
+      "id": "prog99_fail",
+      "name": "Failing Probe",
+      "ideal_cycle_ms": 10000,
+      "base_reject_rate": 1.0
     }
   ]
 }
