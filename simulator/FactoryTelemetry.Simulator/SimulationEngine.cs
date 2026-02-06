@@ -46,9 +46,11 @@ public sealed class SimulationEngine
     private string _currentProgramId = string.Empty;
     private string _currentPartId = string.Empty;
     private string _currentOperationId = string.Empty;
+    private DateTime _operationStartUtc;
     private long _goodCount;
     private long _badCount;
     private string _lastPublishedStateValue = string.Empty;
+    private string _lastCurrentKey = string.Empty;
 
     public SimulationEngine(IPublisher publisher, SimulatorConfig config)
     {
@@ -183,6 +185,8 @@ public sealed class SimulationEngine
             await _publisher.PublishJsonAsync($"factory/{_machineId}/production/goodCount", new { ts = s.tsUtc, machineId = _machineId, value = _goodCount }, ct);
             await _publisher.PublishJsonAsync($"factory/{_machineId}/production/badCount", new { ts = s.tsUtc, machineId = _machineId, value = _badCount }, ct);
             await _publisher.PublishJsonAsync($"factory/{_machineId}/production/totalCount", new { ts = s.tsUtc, machineId = _machineId, value = total }, ct);
+
+            await PublishCurrentExecutionSnapshotAsync(s.tsUtc, s.state, ct);
         }
     }
 
@@ -331,14 +335,6 @@ public sealed class SimulationEngine
         if (_cycleRemainingMs > 0) return;
 
         var isGood = !IsRejected(_currentProgramId);
-        if (isGood)
-        {
-            _goodCount++;
-        }
-        else
-        {
-            _badCount++;
-        }
 
         _operationEvents.Enqueue(new OperationCompletedEvent(
             TimestampUtc: DateTime.UtcNow,
@@ -354,6 +350,7 @@ public sealed class SimulationEngine
 
         if (!isGood)
         {
+            _badCount++;
             _partEvents.Enqueue(new PartCompletedEvent(DateTime.UtcNow, _currentPartId, false));
             MoveToNextPart();
             return;
@@ -361,6 +358,7 @@ public sealed class SimulationEngine
 
         if (isLastOperation)
         {
+            _goodCount++;
             _partEvents.Enqueue(new PartCompletedEvent(DateTime.UtcNow, _currentPartId, true));
             MoveToNextPart();
             return;
@@ -386,6 +384,7 @@ public sealed class SimulationEngine
         var max = (int)Math.Round(_cycleIdealMs * 1.4);
         _cycleActualMs = Clamp(actual, min, max);
         _cycleRemainingMs = _cycleActualMs;
+        _operationStartUtc = DateTime.UtcNow;
         return true;
     }
 
@@ -413,6 +412,7 @@ public sealed class SimulationEngine
         _cycleRemainingMs = 0;
         _cycleIdealMs = 0;
         _cycleActualMs = 0;
+        _operationStartUtc = DateTime.UtcNow;
     }
 
     private void AdvanceRouting()
@@ -444,6 +444,35 @@ public sealed class SimulationEngine
             MachineState.Alarm => "DOWN",
             _ => "IDLE"
         };
+    }
+
+    private async Task PublishCurrentExecutionSnapshotAsync(DateTime tsUtc, MachineState state, CancellationToken ct)
+    {
+        var stateValue = MapStateValue(state);
+        var elapsedMs = 0;
+        if (state == MachineState.Running && _cycleIdealMs > 0)
+        {
+            elapsedMs = (int)Math.Max(0, (tsUtc - _operationStartUtc).TotalMilliseconds);
+        }
+
+        var expectedCycleMs = _cycleIdealMs;
+        var key = $"{stateValue}|{_currentPartId}|{_currentOperationId}|{_currentProgramId}|{expectedCycleMs}";
+
+        if (state == MachineState.Running || !string.Equals(_lastCurrentKey, key, StringComparison.Ordinal))
+        {
+            _lastCurrentKey = key;
+            await _publisher.PublishJsonAsync($"factory/{_machineId}/production/current", new
+            {
+                ts = tsUtc,
+                machineId = _machineId,
+                state = stateValue,
+                partId = _currentPartId,
+                operation = _currentOperationId,
+                programId = _currentProgramId,
+                elapsedMs,
+                expectedCycleMs
+            }, ct);
+        }
     }
 
     private bool IsRejected(string programId)
