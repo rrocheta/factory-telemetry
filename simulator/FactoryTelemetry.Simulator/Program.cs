@@ -32,6 +32,8 @@ internal class Program
             var simConfig = SimulatorConfig.Load(basePath, machineId, seed);
 
             builder.Services.AddSingleton(simConfig);
+            builder.Services.Configure<MqttOptions>(
+                builder.Configuration.GetSection(MqttOptions.SectionName));
             builder.Services.AddSingleton<IPublisher, MqttPublisher>();
             builder.Services.AddSingleton<SimulationEngine>();
             builder.Services.AddHostedService<SimulatorService>();

@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MQTTnet;
 using MQTTnet.Protocol;
 
@@ -24,19 +25,41 @@ public sealed class MqttPublisher : IPublisher, IHostedService, IAsyncDisposable
     };
 
     public MqttPublisher(ILogger<MqttPublisher> logger)
+        : this(logger, Options.Create(new MqttOptions()))
+    {
+    }
+
+    public MqttPublisher(ILogger<MqttPublisher> logger, IOptions<MqttOptions> mqttOptions)
     {
         _logger = logger;
+        var settings = mqttOptions.Value;
+
+        if (settings.Tls.Enabled)
+        {
+            throw new InvalidOperationException(
+                "MQTT TLS is configured but not yet implemented in MqttPublisher. " +
+                "Set Mqtt:Tls:Enabled to false until TLS wiring is added.");
+        }
 
         // v5 sample-style
         var factory = new MqttClientFactory();
         _client = factory.CreateMqttClient();
 
-        _options = new MqttClientOptionsBuilder()
-            .WithTcpServer("localhost", 1883)
-            //.WithCredentials("admin", "root")
-            .WithClientId($"cnc-simulator-{Environment.MachineName}")
-            .WithCleanSession()
-            .Build();
+        var clientId = string.IsNullOrWhiteSpace(settings.ClientId)
+            ? $"cnc-simulator-{Environment.MachineName}"
+            : settings.ClientId;
+
+        var optionsBuilder = new MqttClientOptionsBuilder()
+            .WithTcpServer(settings.Host, settings.Port)
+            .WithClientId(clientId)
+            .WithCleanSession(settings.CleanSession);
+
+        if (!string.IsNullOrWhiteSpace(settings.Username))
+        {
+            optionsBuilder = optionsBuilder.WithCredentials(settings.Username, settings.Password);
+        }
+
+        _options = optionsBuilder.Build();
 
         _client.ConnectedAsync += e =>
         {
@@ -57,8 +80,9 @@ public sealed class MqttPublisher : IPublisher, IHostedService, IAsyncDisposable
 
         _loopCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _loopTask = RunConnectionLoopAsync(_loopCts.Token);
-        
-        await EnsureConnectedAsync(cancellationToken);
+
+        _logger.LogInformation("MQTT connection loop started; broker connection will be retried in background.");
+        await Task.CompletedTask;
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
@@ -93,8 +117,6 @@ public sealed class MqttPublisher : IPublisher, IHostedService, IAsyncDisposable
 
     public async Task PublishJsonAsync(string topic, object payload, CancellationToken ct)
     {
-        await EnsureConnectedAsync(ct);
-
         if (!_client.IsConnected)
         {
             _logger.LogDebug("Skip publish (not connected): {Topic}", topic);
@@ -113,7 +135,18 @@ public sealed class MqttPublisher : IPublisher, IHostedService, IAsyncDisposable
             .WithQualityOfServiceLevel(qos)
             .Build();
 
-        await _client.PublishAsync(msg, ct);
+        try
+        {
+            await _client.PublishAsync(msg, ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to publish MQTT message to topic {Topic}", topic);
+        }
     }
 
     private async Task RunConnectionLoopAsync(CancellationToken ct)
