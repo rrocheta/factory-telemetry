@@ -1,6 +1,6 @@
 # 📊 Real-time IIoT Dashboard (MQTT)
 
-A real-time industrial dashboard built for **learning and portfolio purposes**, demonstrating how MQTT-based telemetry can be processed, visualized, and transformed into meaningful production KPIs using a modern web stack.
+A real-time industrial dashboard developed as a learning-driven project to explore realistic IIoT architectures, demonstrating how MQTT-based telemetry can be processed, visualized, and transformed into meaningful production KPIs using a modern web stack.
 
 The project simulates industrial machine data and displays it in real time with different update cadences, while also calculating a simplified **OEE (Overall Equipment Effectiveness)**.
 
