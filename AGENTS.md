@@ -1,249 +1,100 @@
-# Engineering Guidelines
+# AGENTS.md
 
-## System Overview
+## Project Overview
 
-This repository represents a **reference architecture for a real-time
-IIoT platform**, designed for learning and portfolio purposes.\
-It demonstrates how industrial telemetry can be simulated, transported,
-processed, stored, and visualized using modern software practices.
+Factory Telemetry is a learning and portfolio project for a real-time IIoT platform.
 
-The system favors **architectural clarity, realistic industrial
-patterns, and maintainability** over production-grade completeness.
+Only the .NET 8 CNC telemetry simulator is currently implemented. The MQTT broker, backend API, PostgreSQL persistence, React dashboard, OEE calculation and Docker Compose environment are planned components and must not be treated as existing functionality.
 
-------------------------------------------------------------------------
+## Current Structure
 
-## Architecture Principles
+The implemented project is located at:
 
--   Prefer event-driven communication over tight coupling.
--   Keep services independently deployable.
--   Separate transport, processing, and visualization concerns.
--   Favor deterministic behavior when simulating industrial processes.
--   Design for horizontal scalability (multiple machines).
--   Optimize for observability and debuggability.
+`simulator/FactoryTelemetry.Simulator/`
 
-------------------------------------------------------------------------
+Main components:
 
-## Core Architectural Rule
+- `SimulationEngine.cs`: machine state and telemetry simulation
+- `MqttPublisher.cs`: MQTT connection and message publishing
+- `SimulatorService.cs`: background simulation service
+- `SimulationConfig.cs`: configuration loading and validation
+- `Config/`: simulated programs, parts and production routes
 
-👉 **The frontend must never connect directly to the MQTT broker.**
+## Build and Run
 
-All external access flows through the API layer to ensure:
+Run these commands from `simulator/FactoryTelemetry.Simulator/`:
 
--   security\
--   authentication boundaries\
--   scalability\
--   protocol abstraction
+```bash
+dotnet restore
+dotnet build
+dotnet run
+```
 
-------------------------------------------------------------------------
+There is currently no automated test project.
 
-## System Components
+## Engineering Guidelines
 
-### MQTT Broker (Mosquitto)
+- Keep simulation logic separate from MQTT transport.
+- Preserve deterministic simulations through machine-specific seeds.
+- Use dependency injection and asynchronous I/O.
+- Avoid blocking operations inside simulation loops.
+- Keep telemetry payloads small and schema-consistent.
+- Make state transitions explicit and testable.
+- Prefer clear, maintainable code over unnecessary abstractions.
+- Add tests when changing state transitions, configuration validation or production-routing behavior.
 
-Responsible for reliable message transport.
+## Configuration
 
--   user/password authentication\
--   topic-based ACLs\
--   lightweight pub/sub communication
+MQTT settings are defined in `appsettings.json`.
 
-------------------------------------------------------------------------
+The machine identifier and deterministic seed can be configured through:
 
-### Simulator
+- `SIM_MACHINE_ID`
+- `SIM_SEED`
 
-Generates realistic industrial telemetry using a state-machine approach.
+Do not hardcode credentials or environment-specific configuration.
 
-Responsibilities:
+## MQTT Conventions
 
--   simulate machine states (RUN / IDLE / ALARM)\
--   publish telemetry signals\
--   emulate industrial cadence patterns
+Topics use the following prefix:
 
-Each simulator instance should behave like an independent machine.
+`factory/{machineId}/`
 
-------------------------------------------------------------------------
+Examples:
 
-### Backend API
+- `factory/cnc1/state`
+- `factory/cnc1/heartbeat`
+- `factory/cnc1/spindle/rpm`
+- `factory/cnc1/production/partCompleted`
 
-Acts as the bridge between MQTT and external consumers.
+When adding topics:
 
-Responsibilities:
+- preserve the existing hierarchy;
+- use predictable names;
+- maintain payload compatibility;
+- choose QoS deliberately;
+- avoid publishing derived business metrics from the simulator.
 
--   subscribe to telemetry topics\
--   process incoming data\
--   expose REST endpoints\
--   stream updates via WebSocket/SSE\
--   calculate simplified OEE metrics\
--   persist telemetry
+## Scope Boundaries
 
-The API is the **system boundary**.
+The simulator is responsible for producing source telemetry and production events.
 
-------------------------------------------------------------------------
+The following concerns belong to future external services:
 
-### Database (PostgreSQL)
+- telemetry persistence;
+- historical queries;
+- aggregation;
+- OEE and KPI calculation;
+- REST APIs;
+- WebSocket or SSE streaming;
+- frontend visualization.
 
-Stores telemetry and derived metrics.
+Do not introduce these responsibilities into the simulator.
 
-Used for:
+## Planned Architecture
 
--   historical queries\
--   aggregation\
--   KPI calculations\
--   trend visualization
+The intended data flow is:
 
-Favor simple schemas before introducing time-series specialization.
+`Simulator → MQTT Broker → Backend API → Database / WebSocket → React Dashboard`
 
-------------------------------------------------------------------------
-
-### Frontend Dashboard
-
-Provides real-time visualization of machine data.
-
-Guidelines:
-
--   UI rendering should be throttled when necessary.
--   Avoid reflecting raw telemetry frequency directly.
--   Optimize for readability over visual noise.
-
-The dashboard should resemble a lightweight SCADA/HMI experience.
-
-------------------------------------------------------------------------
-
-## Data Flow
-
-Simulator\
-↓\
-MQTT Broker\
-↓\
-API (subscribe + process)\
-↓\
-WebSocket / SSE\
-↓\
-Frontend
-
-------------------------------------------------------------------------
-
-## Topic Conventions
-
-Topics follow a scalable hierarchical pattern:
-
-    factory/{machineId}/{signal}
-
-Example:
-
-    factory/cnc1/state
-    factory/cnc1/temperature
-    factory/cnc1/vibration
-
-### Guidelines
-
--   Avoid deep topic nesting.
--   Keep signal names predictable.
--   Maintain payload schema stability.
--   Prefer numeric/boolean payloads for simplicity.
-
-------------------------------------------------------------------------
-
-## Observability
-
-All services should provide:
-
--   structured logging\
--   meaningful error messages\
--   startup diagnostics
-
-Future improvements may include:
-
--   distributed tracing\
--   metrics collection\
--   health checks
-
-------------------------------------------------------------------------
-
-## Service Documentation
-
-Each service must maintain its own `AGENTS.md` describing:
-
--   internal structure\
--   coding conventions\
--   configuration\
--   operational notes
-
-This document focuses only on **system-wide engineering decisions**.
-
-------------------------------------------------------------------------
-
-## Repository Strategy
-
-Recommended structure for the platform:
-
-    root
-    │
-    ├── README.md
-    ├── AGENTS.md
-    ├── ARCHITECTURE.md (optional)
-    │
-    ├── simulator/
-    ├── api/
-    ├── frontend/
-    └── docs/
-
-Avoid duplicating cross-service rules.
-
-If a topic grows large, move it to `/docs` and reference it.
-
-------------------------------------------------------------------------
-
-## Design Tradeoffs
-
-This project intentionally prioritizes:
-
-✔ architectural realism\
-✔ clarity\
-✔ educational value
-
-Over:
-
-✖ production-scale optimization\
-✖ premature complexity\
-✖ vendor-specific tooling
-
-------------------------------------------------------------------------
-
-## Future Evolution Guidelines
-
-When expanding the system:
-
--   Prefer adding services over overloading existing ones.
--   Maintain clear boundaries.
--   Revisit architectural decisions deliberately.
--   Document major changes.
-
-Avoid turning the platform into a monolith.
-
-------------------------------------------------------------------------
-
-## Scope
-
-This project is designed to demonstrate:
-
--   real-time systems thinking\
--   event-driven design\
--   industrial data modeling\
--   containerized infrastructure\
--   KPI transformation
-
-It is not intended to replicate a full MES or SCADA platform.
-
-------------------------------------------------------------------------
-
-## Engineering Mindset
-
-Favor:
-
--   simplicity\
--   explicitness\
--   predictability
-
-Over clever abstractions.
-
-Readable systems scale better than smart ones.
+Treat this as a planned architecture, not as implemented functionality. Update the README and this file whenever a new component becomes operational.
